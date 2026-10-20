@@ -1,0 +1,31 @@
+<?php
+
+return [
+    'required' => 'El campo :attribute es obligatorio.',
+    'required_if' => 'El campo :attribute es obligatorio para esta opción.',
+    'email' => 'Introduce un correo electrónico válido.',
+    'string' => 'El campo :attribute debe ser texto.',
+    'integer' => 'El campo :attribute debe ser un número entero.',
+    'boolean' => 'El campo :attribute debe ser verdadero o falso.',
+    'unique' => 'Ya existe un registro con este :attribute.',
+    'exists' => 'El valor seleccionado para :attribute no existe o no está activo.',
+    'in' => 'El valor seleccionado para :attribute no es válido.',
+    'date_format' => 'El campo :attribute debe tener el formato :format.',
+    'before_or_equal' => 'La fecha de :attribute no puede ser futura.',
+    'confirmed' => 'La confirmación de :attribute no coincide.',
+    'after_or_equal' => 'La fecha de :attribute debe ser igual o posterior a :date.',
+    'distinct' => 'Hay valores repetidos en el campo :attribute.',
+    'min' => ['string' => 'El campo :attribute debe tener al menos :min caracteres.', 'numeric' => 'El campo :attribute debe ser al menos :min.', 'array' => 'Debes incluir al menos :min registro.'],
+    'max' => ['string' => 'El campo :attribute no puede superar :max caracteres.', 'numeric' => 'El campo :attribute no puede superar :max.', 'array' => 'No puedes importar más de :max registros.'],
+    'attributes' => [
+        'name' => 'nombre', 'email' => 'correo electrónico', 'password' => 'contraseña',
+        'current_password' => 'contraseña actual', 'document' => 'documento', 'birth_date' => 'nacimiento',
+        'classroom' => 'aula', 'phone' => 'teléfono', 'emergency_contact' => 'contacto de emergencia',
+        'emergency_phone' => 'teléfono de emergencia', 'allergies' => 'alergias', 'background' => 'antecedentes',
+        'patient_id' => 'paciente', 'teacher_id' => 'docente', 'request_id' => 'solicitud',
+        'reason' => 'motivo de consulta', 'symptoms' => 'evaluación y síntomas', 'diagnosis' => 'diagnóstico',
+        'indications' => 'indicaciones', 'referral_destination' => 'establecimiento de destino',
+        'referral_reason' => 'motivo de derivación', 'role' => 'rol', 'status' => 'estado',
+        'priority' => 'prioridad', 'active' => 'cuenta activa', 'authorization_note' => 'observación',
+    ],
+];
