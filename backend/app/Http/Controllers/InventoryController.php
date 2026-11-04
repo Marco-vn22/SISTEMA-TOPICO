@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
+use App\Models\CareEvent;
 use App\Models\CareRequest;
 use App\Models\Encounter;
 use App\Models\Patient;
@@ -136,10 +137,15 @@ class InventoryController extends Controller
             'quantity' => 'required|integer|min:1|max:1000000', 'instructions' => 'required|string|max:5000',
         ]);
         $saved = DB::transaction(function () use ($request, $data): Prescription {
+            $careId = Encounter::query()->whereKey($data['encounter_id'])->value('request_id');
+            CareRequest::query()->whereKey($careId)->lockForUpdate()->firstOrFail();
+            $encounter = Encounter::query()->lockForUpdate()->findOrFail($data['encounter_id']);
+            abort_unless($encounter->status === 'borrador' && $encounter->care_type === 'urgencia', 409, 'Registra primero el diagnóstico de una atención en tópico que siga abierta.');
             $product = Product::query()->lockForUpdate()->findOrFail($data['product_id']);
             abort_unless($product->active && $product->kind === 'medicamento', 422, 'Selecciona un medicamento activo.');
             $saved = Prescription::query()->create($data + ['created_by' => $request->user()->id]);
             $this->audit($request, 'created', 'prescription', $saved->id);
+            CareEvent::record($request->user(), $encounter->request_id, 'receta_registrada');
 
             return $saved;
         });
@@ -152,6 +158,8 @@ class InventoryController extends Controller
         $this->authorize($request, true);
         $data = $request->validate(['quantity' => 'required|integer|min:1|max:1000000']);
         DB::transaction(function () use ($request, $data, $prescription): void {
+            $careId = Encounter::query()->whereKey($prescription->encounter_id)->value('request_id');
+            CareRequest::query()->whereKey($careId)->lockForUpdate()->firstOrFail();
             $product = Product::query()->lockForUpdate()->findOrFail($prescription->product_id);
             $rx = Prescription::query()->lockForUpdate()->findOrFail($prescription->id);
             abort_unless($product->active, 422, 'El medicamento está inactivo.');
@@ -170,6 +178,7 @@ class InventoryController extends Controller
             }
             $rx->increment('dispensed', $data['quantity']);
             $this->audit($request, 'dispensed', 'prescription', $rx->id);
+            CareEvent::record($request->user(), $rx->encounter->request_id, 'medicamento_entregado');
         });
 
         return response()->json(['message' => 'Entrega registrada.']);
@@ -184,8 +193,10 @@ class InventoryController extends Controller
             'followup_notes' => 'required|string|max:10000', 'referral_contact' => 'nullable|string|max:255',
         ]);
         DB::transaction(function () use ($request, $data, $encounter): void {
+            CareRequest::query()->whereKey($encounter->request_id)->lockForUpdate()->firstOrFail();
             $encounter->update($data + ['followup_by' => $request->user()->id]);
             $this->audit($request, 'followup:'.$data['followup_status'], 'encounter', $encounter->id);
+            CareEvent::record($request->user(), $encounter->request_id, 'seguimiento_actualizado');
         });
 
         return response()->json(['message' => 'Seguimiento actualizado.']);
@@ -203,9 +214,9 @@ class InventoryController extends Controller
 
         return response()->json([
             'from' => $data['from'], 'to' => $data['to'], 'statuses' => $statuses, 'consumption' => $consumption,
-            'patients_attended' => Encounter::query()->whereBetween('created_at', [$from, $to])->distinct()->count('patient_id'),
-            'attentions' => Encounter::query()->whereBetween('created_at', [$from, $to])->count(),
-            'referrals' => Encounter::query()->whereBetween('created_at', [$from, $to])->where('outcome', 'derivada')->count(),
+            'patients_attended' => Encounter::query()->where('status', 'cerrada')->whereBetween('closed_at', [$from, $to])->distinct()->count('patient_id'),
+            'attentions' => Encounter::query()->where('status', 'cerrada')->whereBetween('closed_at', [$from, $to])->count(),
+            'referrals' => Encounter::query()->where('status', 'cerrada')->whereBetween('closed_at', [$from, $to])->where('outcome', 'derivada')->count(),
         ]);
     }
 
@@ -214,7 +225,7 @@ class InventoryController extends Controller
         $this->authorize($request);
         $data = $request->validate([
             'rows' => 'required|array|min:1|max:200', 'rows.*.name' => 'required|string|max:255',
-            'rows.*.document' => 'required|string|max:30|distinct', 'rows.*.classroom' => 'nullable|string|max:100',
+            'rows.*.document' => 'required|string|max:30|distinct',
             'rows.*.phone' => 'nullable|string|max:30',
         ]);
         $counts = DB::transaction(function () use ($request, $data): array {
@@ -228,9 +239,10 @@ class InventoryController extends Controller
                     $created++;
                     $patient->created_by = $request->user()->id;
                 }
-                $patient->fill(collect($row)->only(['name', 'document', 'classroom', 'phone'])->all());
+                $patient->fill(collect($row)->only(['name', 'document', 'phone'])->all());
                 $patient->updated_by = $request->user()->id;
                 $patient->save();
+                $patient->ensureAccessAccount($request->user());
                 $this->audit($request, 'imported', 'patient', $patient->id);
             }
 

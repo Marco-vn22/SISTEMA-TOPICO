@@ -1,12 +1,19 @@
 <?php
 
+use App\Http\Controllers\CareWorkflowController;
 use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\SessionController;
 use App\Http\Controllers\TopicoController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
     Route::post('login', [TopicoController::class, 'login'])->middleware('throttle:20,1');
     Route::middleware('topico.auth')->group(function (): void {
+        Route::get('requests/{careRequest}/tracking', [CareWorkflowController::class, 'tracking']);
+        Route::put('requests/{careRequest}/assessment', [CareWorkflowController::class, 'assessment']);
+        Route::post('encounters/{encounter}/close', [CareWorkflowController::class, 'close']);
+        Route::get('care-register', [CareWorkflowController::class, 'registry']);
+        Route::post('care-register/{encounter}/receive', [CareWorkflowController::class, 'review']);
         Route::get('products', [InventoryController::class, 'products']);
         Route::post('products', [InventoryController::class, 'saveProduct']);
         Route::put('products/{product}', [InventoryController::class, 'saveProduct']);
@@ -21,7 +28,9 @@ Route::prefix('v1')->group(function (): void {
         Route::get('audit', [InventoryController::class, 'auditLogs']);
         Route::get('me', [TopicoController::class, 'me']);
         Route::post('logout', [TopicoController::class, 'logout']);
-        Route::put('password', [TopicoController::class, 'password']);
+        Route::put('password', [TopicoController::class, 'password'])->middleware('throttle:5,1');
+        Route::get('sessions', [SessionController::class, 'index']);
+        Route::delete('sessions/{session}', [SessionController::class, 'destroy'])->whereNumber('session')->middleware('throttle:20,1');
         Route::get('dashboard', [TopicoController::class, 'dashboard']);
         Route::get('directory', [TopicoController::class, 'directory']);
         Route::get('users', [TopicoController::class, 'users']);
@@ -35,6 +44,5 @@ Route::prefix('v1')->group(function (): void {
         Route::post('requests', [TopicoController::class, 'createRequest']);
         Route::patch('requests/{careRequest}', [TopicoController::class, 'updateRequest']);
         Route::get('encounters', [TopicoController::class, 'encounters']);
-        Route::post('encounters', [TopicoController::class, 'createEncounter']);
     });
 });

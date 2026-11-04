@@ -6,9 +6,8 @@ use App\Models\User;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
-use Illuminate\Support\Str;
 
-#[Signature('topico:setup')]
+#[Signature('topico:setup {--dni= : DNI de ocho dígitos del coordinador inicial}')]
 #[Description('Crea el coordinador inicial si todavía no existe uno activo')]
 class SetupTopico extends Command
 {
@@ -24,12 +23,17 @@ class SetupTopico extends Command
 
             return self::FAILURE;
         }
-        $password = Str::password(16, symbols: false);
-        User::query()->create(['name' => 'Coordinador de Tópico', 'email' => 'admin@topico.local', 'password' => $password, 'role' => 'coordinador', 'active' => true]);
+        $dni = (string) $this->option('dni');
+        if (! preg_match('/^[0-9]{8}$/', $dni) || User::query()->where('dni', $dni)->exists()) {
+            $this->error('Indica un DNI único de ocho dígitos con la opción --dni.');
+
+            return self::FAILURE;
+        }
+        User::query()->create(['name' => 'Coordinador de Tópico', 'dni' => $dni, 'email' => 'admin@topico.local', 'password' => $dni, 'role' => 'coordinador', 'active' => true, 'uses_initial_password' => true]);
         $this->info('Coordinador inicial creado.');
-        $this->line('Correo: admin@topico.local');
-        $this->line('Contraseña temporal: '.$password);
-        $this->warn('Cambia la contraseña desde el menú de tu cuenta.');
+        $this->line('DNI: '.$dni);
+        $this->line('Contraseña inicial: el mismo DNI.');
+        $this->info('En el primer ingreso debes cambiar la contraseña antes de utilizar el sistema.');
 
         return self::SUCCESS;
     }

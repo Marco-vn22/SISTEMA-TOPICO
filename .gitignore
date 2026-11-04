@@ -1,0 +1,30 @@
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+!**/.env.example
+auth.json
+*.pem
+*.key
+
+# Patient databases, exports, logs and backups
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sql
+*.dump
+*.log
+*.bak
+
+# Dependencies and generated builds
+node_modules/
+vendor/
+dist/
+.quasar/
+
+# Local editor and operating system files
+.vscode/
+.idea/
+.codex/
+Thumbs.db
+.DS_Store
